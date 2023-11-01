@@ -6,7 +6,8 @@ const solid = defineModule({
 	setup: async (ultra) => {
 		ultra.vfs.add({
 			path: "/static/index.html",
-			contents: () => "<h1>Hello World</h1>"
+			contents: () => "<body><script src='/client/test.tsx'></script></body>",
+			write: false,
 		})
 	}
 })

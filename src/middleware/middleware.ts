@@ -1,7 +1,7 @@
 import { type HonoMiddlewareHandler } from "../../deps.ts";
 import { type Ultra } from "../createUltra.ts";
 
-export { staticMiddleware, ultraDirStaticMiddleware, vfsMiddleware } from "./staticMiddleware.ts"
+export { staticMiddleware } from "./staticMiddleware.ts"
 export { compilerMiddleware } from "./compilerMiddleware.ts"
 
 export type MiddlewareFactory = (ultra: Ultra) => HonoMiddlewareHandler;

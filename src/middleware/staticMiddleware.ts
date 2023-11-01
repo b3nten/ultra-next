@@ -3,31 +3,61 @@ import { getFilePath } from "./filepath.ts";
 import { getMimeType } from "../mimetypes.ts";
 import { MiddlewareFactory } from "./middleware.ts";
 
-const DEFAULT_DOCUMENT = "index.html";
-const { open } = Deno;
-
-export const staticMiddleware: MiddlewareFactory = (ultra) =>
-  serveStatic({
-    path: "./static",
-  });
-
-export const vfsMiddleware: MiddlewareFactory =
+export const staticMiddleware: MiddlewareFactory =
   (ultra) => async (context, next) => {
-    const pathname = new URL(context.req.url).pathname;
-    const filename = pathname === "/" ? "/static/index.html" : "/static" + pathname;
-    const potentialVFile = ultra.vfs.get(filename)
-    const content = potentialVFile?.open();
-    if (potentialVFile && content) {
-      context.header("Content-Type", getMimeType(potentialVFile.path));
-      return context.body(content);
+    if (context.finalized) {
+      await next();
+      return;
     }
-    return await next();
-  };
 
-export const ultraDirStaticMiddleware: MiddlewareFactory = (ultra) =>
-  serveStatic({
-    path: ultra.dir + "/static",
-  });
+    const url = new URL(context.req.url);
+    const filename = decodeURI(url.pathname);
+    let path = getFilePath({
+      filename,
+      root: "static",
+    });
+    if (!path) return await next();
+    const potentialFilePaths = [
+      `./${path}`,
+      `./${path}` + ".html",
+      "./.ultra/" + path,
+      "./.ultra/" + path + ".html",
+    ];
+    path = `./${path}`;
+
+    let file;
+
+    for (const potentialFilePath of potentialFilePaths) {
+      try {
+        file = await Deno.open(potentialFilePath);
+        break;
+      } catch (e) {
+        //
+      }
+    }
+
+    if (!file) {
+      for (const potentialFilePath of potentialFilePaths) {
+        if (ultra.vfs.has(potentialFilePath)) {
+          file = ultra.vfs.get(potentialFilePath)?.open();
+          break;
+        }
+      }
+    }
+
+    if (file) {
+      const mimeType = getMimeType(path);
+      if (mimeType) {
+        context.header("Content-Type", mimeType);
+      }
+      // Return Response object with stream
+      return context.body(typeof file === "string" ? file : file.readable);
+    } else {
+      await next();
+    }
+
+    return;
+  };
 
 export type ServeStaticOptions = {
   root?: string;
@@ -44,14 +74,16 @@ function serveStatic(options: ServeStaticOptions = { root: "" }) {
     }
 
     const url = new URL(c.req.url);
+
     const filename = options.path ?? decodeURI(url.pathname);
     let path = getFilePath({
       filename: options.rewriteRequestPath
         ? options.rewriteRequestPath(filename)
         : filename,
       root: options.root,
-      defaultDocument: DEFAULT_DOCUMENT,
     });
+
+    console.log(path);
 
     if (!path) return await next();
 
@@ -60,7 +92,7 @@ function serveStatic(options: ServeStaticOptions = { root: "" }) {
     let file;
 
     try {
-      file = await open(path);
+      file = await Deno.open(path);
     } catch (e) {
       //
     }

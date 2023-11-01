@@ -3,12 +3,12 @@ import { debounce, defu } from "../deps.ts";
 import { server as ultra_server } from "./ultra.ts";
 import { UltraServer } from "./server.ts";
 import {
+  compilerMiddleware,
   htmlMiddleware,
   staticMiddleware,
-  ultraDirStaticMiddleware,
-  vfsMiddleware,
 } from "./middleware/middleware.ts";
 import { writeTextFileRecursively } from "./fs.ts";
+import { UltraCompiler } from "./compiler.ts";
 
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends Record<string, unknown> ? DeepPartial<T[P]>
@@ -28,23 +28,24 @@ export async function main(config?: UserConfig) {
     await mod.setup(ultra);
   }
 
-  await ultra.hooks.call("ultra:addDefaultMiddleware");
   ultra.defaults.middleware.html && ultra.middleware.unshift({
     path: "*",
     handler: htmlMiddleware(ultra),
   });
   if (ultra.defaults.middleware.static) {
-    ultra.middleware = [{
-      path: "*",
-      handler: staticMiddleware(ultra),
-    }, {
-      path: "*",
-      handler: ultraDirStaticMiddleware(ultra),
-    }, {
-      path: "*",
-      handler: vfsMiddleware(ultra),
-    }, ...ultra.middleware];
+    ultra.middleware = [
+      { path: "*", handler: staticMiddleware(ultra) },
+      ...ultra.middleware,
+    ];
   }
+  if (ultra.defaults.compiler) {
+    ultra.compiler.compilers.push(new UltraCompiler(ultra));
+    ultra.defaults.middleware.compiler && ultra.middleware.push({
+      path: "*",
+      handler: compilerMiddleware(ultra),
+    });
+  }
+  await ultra.hooks.call("ultra:addDefaultMiddleware");
 
   // Create .ultra directory, write ultra.js
   await Deno.mkdir(ultra.dir, { recursive: true });

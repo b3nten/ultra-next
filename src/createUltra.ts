@@ -1,3 +1,4 @@
+import { Compiler } from "./compiler.ts";
 import { Hooks } from "./hooks.ts";
 import { UltraModule } from "./modules.ts";
 import { Handler, Middleware } from "./server.ts";
@@ -24,11 +25,17 @@ export type Ultra = {
   hooks: Hooks<UltraHooks>;
   handlers: Array<Handler>;
   middleware: Array<Middleware>;
+  compiler: {
+    directories: Array<string>;
+    compilers: Array<Compiler>;
+  }
   defaults: {
     middleware: {
       static: boolean;
       html: boolean;
-    }
+      compiler: boolean;
+    },
+    compiler: boolean;
   }
 } & {
   [key: string]: any;
@@ -48,11 +55,17 @@ export function createUltra(config: {
     hooks: new Hooks(),
     handlers: [],
     middleware: [],
+    compiler: {
+      directories: ["/client"],
+      compilers: [],
+    },
     defaults: {
       middleware: {
         static: true,
         html: true,
-      }
+        compiler: true,
+      },
+      compiler: true,
     }
   };
 }
