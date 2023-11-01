@@ -1,0 +1,7 @@
+{
+  "lock": false,
+  "imports": {
+    "#ultra": "./.ultra/ultra.js",
+    "#ultra/": "./.ultra/"
+  }
+}

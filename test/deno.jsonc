@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "#ultra": "./ultra",
+    "#ultra/": "./ultra/"
+  },
+  "tasks": {
+    "dev": "deno run -A ../src/cli.ts dev"
+  },
+  "lock": false
+}
